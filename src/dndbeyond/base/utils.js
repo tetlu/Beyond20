@@ -245,6 +245,12 @@ async function buildAttackRoll(character, attack_source, name, description, prop
                             piercer_damage[0] = piercer_damage[0].replace(/([0-9]+)d([0-9]+)/, '1d$2');
                             crit_damages.push(piercer_damage[0]);
                             crit_damage_types.push("Piercer Feat");
+
+                            // one time die reroll of the weapon base damage with differing thresholds depending on the damage die
+                            let dieSizes = [4, 6, 8, 10, 12];
+                            dieSizes.forEach(function (dieSize) {
+                                damages[0] = damages[0].replace('d' + dieSize, 'd' + dieSize + 'r<=' + dieSize / 2);
+                            });
                             break;
                         }
                     }
