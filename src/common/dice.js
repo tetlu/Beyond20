@@ -130,15 +130,23 @@ class DNDBDice {
         this.amount = parseInt(amount) || 1;
         this.faces = parseInt(faces) || 0;
         this._modifiers = modifiers || "";
-        this._reroll = { "active": false, "value": 0, "operator": "=" }
+        this._reroll = { "active": false, "count": 0, "value": 0, "operator": "=" }
         this._dk = { "drop": false, "keep": false, "high": false, "amount": 0 }
         this._min = 0;
         if (modifiers != "") {
             const match_ro = modifiers.match(/r(=|<|<=|>|>=)([0-9]+)/);
             if (match_ro) {
                 this._reroll.active = true;
+                this._reroll.count = this.amount;
                 this._reroll.operator = match_ro[1];
                 this._reroll.value = parseInt(match_ro[2]);
+            }
+            const match_rlo = modifiers.match(/rl([0-9])(=|<|<=|>|>=)([0-9]+)/);
+            if (match_rlo) {
+                this._reroll.active = true;
+                this._reroll.count = parseInt(match_rlo[1]);
+                this._reroll.operator = match_rlo[2];
+                this._reroll.value = parseInt(match_rlo[3]);
             }
             const match_dk = modifiers.match(/(dl|dh|kl|kh)([0-9]*)/);
             if (match_dk) {
@@ -193,17 +201,21 @@ class DNDBDice {
     async handleModifiers() {
         if (this._reroll.active) {
             let rerolls = 0;
-            for (let roll of this._rolls) {
-                // Check for reroll modifier && discard old value && reroll it if necessary
-                const die = roll.roll;
-                if ((this._reroll.operator == "=" && die == this._reroll.value) ||
-                    (this._reroll.operator == "<=" && die <= this._reroll.value) ||
-                    (this._reroll.operator == "<" && die < this._reroll.value) ||
-                    (this._reroll.operator == ">=" && die >= this._reroll.value) ||
-                    (this._reroll.operator == ">" && die > this._reroll.value)) {
-                    roll.discarded = true;
-                    rerolls++;
+            let sortedRolls = this._rolls.sort((a,b) => a.roll - b.roll);
+            for (let roll of sortedRolls) {
+                if (rerolls < this._reroll.count) {
+                    // Check for reroll modifier && discard old value && reroll it if necessary
+                    const die = roll.roll;
+                    if ((this._reroll.operator == "=" && die == this._reroll.value) ||
+                        (this._reroll.operator == "<=" && die <= this._reroll.value) ||
+                        (this._reroll.operator == "<" && die < this._reroll.value) ||
+                        (this._reroll.operator == ">=" && die >= this._reroll.value) ||
+                        (this._reroll.operator == ">" && die > this._reroll.value)) {
+                        roll.discarded = true;
+                        rerolls++;
+                    }
                 }
+            
             }
             if (rerolls)
                 await this.rerollDice(rerolls);
